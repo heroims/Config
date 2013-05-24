@@ -190,40 +190,133 @@ otherButtonTitles:nil];  \
 [alert release];
 
 //单例化一个类
-#define SYNTHESIZE_SINGLETON_FOR_CLASS(classname) \
+//头文件
+#define SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(__CLASSNAME__) \
 \
-static classname *shared##classname = nil; \
++ (__CLASSNAME__*) sharedInstance; \
++ (void) purgeSharedInstance;
+//类文件
+#define SYNTHESIZE_SINGLETON_FOR_CLASS(__CLASSNAME__) \
 \
-+ (classname *)shared##classname \
+static volatile __CLASSNAME__* _##__CLASSNAME__##_sharedInstance = nil; \
+\
++ (__CLASSNAME__*) sharedInstanceNoSynch \
+{ \
+return (__CLASSNAME__*) _##__CLASSNAME__##_sharedInstance; \
+} \
+\
++ (__CLASSNAME__*) sharedInstanceSynch \
 { \
 @synchronized(self) \
 { \
-if (shared##classname == nil) \
+if(nil == _##__CLASSNAME__##_sharedInstance) \
 { \
-shared##classname = [[self alloc] init]; \
+_##__CLASSNAME__##_sharedInstance = [[self alloc] init]; \
 } \
+else \
+{ \
+NSAssert2(1==0, @"SynthesizeSingleton: %@ ERROR: +(%@ *)sharedInstance method did not get swizzled.", self, self); \
+} \
+} \
+return (__CLASSNAME__*) _##__CLASSNAME__##_sharedInstance; \
 } \
 \
-return shared##classname; \
++ (__CLASSNAME__*) sharedInstance \
+{ \
+return [self sharedInstanceSynch]; \
 } \
 \
-+ (id)allocWithZone:(NSZone *)zone \
++ (id)allocWithZone:(NSZone*) zone \
 { \
 @synchronized(self) \
 { \
-if (shared##classname == nil) \
+if (nil == _##__CLASSNAME__##_sharedInstance) \
 { \
-shared##classname = [super allocWithZone:zone]; \
-return shared##classname; \
+_##__CLASSNAME__##_sharedInstance = [super allocWithZone:zone]; \
+if(nil != _##__CLASSNAME__##_sharedInstance) \
+{ \
+Method newSharedInstanceMethod = class_getClassMethod(self, @selector(sharedInstanceNoSynch)); \
+method_setImplementation(class_getClassMethod(self, @selector(sharedInstance)), method_getImplementation(newSharedInstanceMethod)); \
+method_setImplementation(class_getInstanceMethod(self, @selector(retainCount)), class_getMethodImplementation(self, @selector(retainCountDoNothing))); \
+method_setImplementation(class_getInstanceMethod(self, @selector(release)), class_getMethodImplementation(self, @selector(releaseDoNothing))); \
+method_setImplementation(class_getInstanceMethod(self, @selector(autorelease)), class_getMethodImplementation(self, @selector(autoreleaseDoNothing))); \
 } \
+} \
+} \
+return _##__CLASSNAME__##_sharedInstance; \
 } \
 \
-return nil; \
++ (void)purgeSharedInstance \
+{ \
+@synchronized(self) \
+{ \
+if(nil != _##__CLASSNAME__##_sharedInstance) \
+{ \
+Method newSharedInstanceMethod = class_getClassMethod(self, @selector(sharedInstanceSynch)); \
+method_setImplementation(class_getClassMethod(self, @selector(sharedInstance)), method_getImplementation(newSharedInstanceMethod)); \
+method_setImplementation(class_getInstanceMethod(self, @selector(retainCount)), class_getMethodImplementation(self, @selector(retainCountDoSomething))); \
+method_setImplementation(class_getInstanceMethod(self, @selector(release)), class_getMethodImplementation(self, @selector(releaseDoSomething))); \
+method_setImplementation(class_getInstanceMethod(self, @selector(autorelease)), class_getMethodImplementation(self, @selector(autoreleaseDoSomething))); \
+[_##__CLASSNAME__##_sharedInstance release]; \
+_##__CLASSNAME__##_sharedInstance = nil; \
+} \
+} \
 } \
 \
 - (id)copyWithZone:(NSZone *)zone \
 { \
 return self; \
+} \
+\
+- (id)retain \
+{ \
+return self; \
+} \
+\
+- (NSUInteger)retainCount \
+{ \
+NSAssert1(1==0, @"SynthesizeSingleton: %@ ERROR: -(NSUInteger)retainCount method did not get swizzled.", self); \
+return NSUIntegerMax; \
+} \
+\
+- (NSUInteger)retainCountDoNothing \
+{ \
+return NSUIntegerMax; \
+} \
+- (NSUInteger)retainCountDoSomething \
+{ \
+return [super retainCount]; \
+} \
+\
+- (void)release \
+{ \
+NSAssert1(1==0, @"SynthesizeSingleton: %@ ERROR: -(void)release method did not get swizzled.", self); \
+} \
+\
+- (void)releaseDoNothing{} \
+\
+- (void)releaseDoSomething \
+{ \
+@synchronized(self) \
+{ \
+[super release]; \
+} \
+} \
+\
+- (id)autorelease \
+{ \
+NSAssert1(1==0, @"SynthesizeSingleton: %@ ERROR: -(id)autorelease method did not get swizzled.", self); \
+return self; \
+} \
+\
+- (id)autoreleaseDoNothing \
+{ \
+return self; \
+} \
+\
+- (id)autoreleaseDoSomething \
+{ \
+return [super autorelease]; \
 }
 
 #endif
