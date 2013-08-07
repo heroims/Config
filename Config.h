@@ -34,6 +34,12 @@
 
 #pragma mark - 常用语句
 #define NavigationBar_HEIGHT 44
+#define TabBar_HEIGHT 49
+
+//界面 尺寸不加状态栏
+#define appFrame [[UIScreen mainScreen] applicationFrame]
+
+#define appBounds [[UIScreen mainScreen] bounds]
 
 #define SCREEN_WIDTH ([UIScreen mainScreen].bounds.size.width)
 #define SCREEN_HEIGHT ([UIScreen mainScreen].bounds.size.height)
