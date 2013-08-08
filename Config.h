@@ -41,6 +41,8 @@
 
 #define appBounds [[UIScreen mainScreen] bounds]
 
+#define appStatusBarFrame [UIApplication sharedApplication].statusBarFrame
+
 #define SCREEN_WIDTH ([UIScreen mainScreen].bounds.size.width)
 #define SCREEN_HEIGHT ([UIScreen mainScreen].bounds.size.height)
 #define SAFE_RELEASE(x) [x release];x=nil
